@@ -10,7 +10,16 @@ extern char dlist_end;
 char **DLPTRS = (char **)0x230;
 char *SDMCTL = (char *)0x22f;
 
+char *PMBASE = (char *)0xd407;
+char *PMCTL = (char *)0xd01d;
+char *HPOSP0 = (char *)0xd000;
+char *HPOSP1 = (char *)0xd001;
+
 typedef struct {
+    unsigned char colpm0;
+    unsigned char colpm1;
+    unsigned char colpm2;
+    unsigned char colpm3;
     unsigned char colpf0;
     unsigned char colpf1;
     unsigned char colpf2;
@@ -18,7 +27,9 @@ typedef struct {
     unsigned char colbk;
 } color_regs_t;
 
-color_regs_t *color_regs = (color_regs_t *)0x2c4;
+color_regs_t *scolor_regs = (color_regs_t *)0x2c0;
+color_regs_t *color_regs = (color_regs_t *)0xd012;
+
 char * hscroll = (char *)0xd404;
 
 void set_video_mem(unsigned char offset) {
@@ -60,12 +71,24 @@ void wait_vbl(char delay) {
   while(*clock != dest);
 }
 
-int main() {
-  color_regs->colpf2 = 0xf;
-  color_regs->colpf1 = 0x34;  // main color
-  color_regs->colpf0 = 0x31;  // shadow
+void cpu_meter_done() {
+  color_regs -> colpm0 = 0;
+  color_regs -> colpm1 = 0;
+}
 
-  *SDMCTL = 0x21;
+int main() {
+  scolor_regs->colpf2 = 0xf;
+  scolor_regs->colpf1 = 0x34;  // main color
+  scolor_regs->colpf0 = 0x31;  // shadow
+
+  scolor_regs->colpm0 = 0xb4;
+  scolor_regs->colpm1 = 0x84;
+  *PMCTL = 3;
+  *PMBASE = 0xd8;
+  *HPOSP0 = 0xcc - 6;
+  *HPOSP1 = 0x2c + 6;
+
+  *SDMCTL = 0x39;
   unsigned char cnt = 0;
 
   for(;;) {
@@ -76,6 +99,7 @@ int main() {
 
     set_video_mem(cnt);
     cnt++;
+    cpu_meter_done();
     wait_vbl(1);
   }
 
